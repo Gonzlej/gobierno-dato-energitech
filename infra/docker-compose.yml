@@ -1,0 +1,60 @@
+version: '3.9'
+services:
+  # --- SILOS DE DATOS ENERGITECH ---
+  db_comercial:
+    image: mysql:8.0
+    container_name: db_comercial
+    environment:
+      MYSQL_DATABASE: comercial_db
+      MYSQL_ROOT_PASSWORD: energi_pass
+    ports:
+      - "3307:3306"
+    volumes:
+      - ./sql/init_comercial.sql:/docker-entrypoint-initdb.d/init_comercial.sql
+
+  db_tecnico:
+    image: postgres:15
+    container_name: db_tecnico
+    environment:
+      POSTGRES_DB: tecnica_db
+      POSTGRES_PASSWORD: energi_pass
+    ports:
+      - "5433:5432"
+    volumes:
+      - ./sql/init_tecnico.sql:/docker-entrypoint-initdb.d/init_tecnico.sql
+
+  # --- INFRAESTRUCTURA OPENMETADATA (Oficial) ---
+  mysql:
+    image: mysql:8.0
+    container_name: openmetadata_mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: openmetadata_password
+      MYSQL_DATABASE: openmetadata_db
+    expose:
+      - "3306"
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.10.2
+    container_name: openmetadata_es
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    expose:
+      - "9200"
+
+  openmetadata_server:
+    image: openmetadata/server:1.2.4
+    container_name: openmetadata_server
+    environment:
+      DB_USER: root
+      DB_USER_PASSWORD: openmetadata_password
+      DB_HOST: mysql
+      DB_NAME: openmetadata_db
+      ELASTICSEARCH_HOST: elasticsearch
+      ELASTICSEARCH_PORT: 9200
+    ports:
+      - "8585:8585"
+    depends_on:
+      - mysql
+      - elasticsearch
